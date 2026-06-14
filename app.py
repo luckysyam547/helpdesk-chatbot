@@ -42,42 +42,66 @@ def auto_train():
     }, "/tmp/chatbot_model.pt")
 
 st.set_page_config(page_title="HelpDesk AI", page_icon="💬", layout="centered")
+
 st.markdown("""
 <style>
-.bubble-user {
-    background-color: #dcf8c6;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin: 5px 0;
-    max-width: 70%;
-    margin-left: auto;
-    text-align: right;
-}
-.bubble-bot {
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin: 5px 0;
-    max-width: 70%;
-    box-shadow: 0px 1px 1px rgba(0,0,0,0.1);
-}
-.header-bar {
+body { background-color: #f0f0f0; }
+.header {
     background-color: #075e54;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
     color: white;
-    padding: 12px;
-    border-radius: 10px 10px 0 0;
+    font-size: 22px;
     font-weight: bold;
-    font-size: 18px;
+    margin-bottom: 20px;
+}
+.chat-box {
+    background-color: #e5ddd5;
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 400px;
+    margin-bottom: 20px;
+}
+.user-msg {
+    background-color: #dcf8c6;
+    padding: 10px 15px;
+    border-radius: 10px 10px 0px 10px;
+    margin: 8px 0px 8px 80px;
+    font-size: 15px;
+    color: #000;
+}
+.bot-msg {
+    background-color: #ffffff;
+    padding: 10px 15px;
+    border-radius: 10px 10px 10px 0px;
+    margin: 8px 80px 8px 0px;
+    font-size: 15px;
+    color: #000;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+}
+.label-user {
+    text-align: right;
+    font-size: 11px;
+    color: #666;
+    margin-right: 5px;
+}
+.label-bot {
+    text-align: left;
+    font-size: 11px;
+    color: #666;
+    margin-left: 5px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="header-bar">💬 HelpDesk AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="header">💬 HelpDesk AI — Customer Support Chatbot</div>',
+            unsafe_allow_html=True)
 
 @st.cache_resource
 def get_model():
     if not os.path.exists("/tmp/chatbot_model.pt"):
-        with st.spinner("Training model please wait 2 minutes..."):
+        with st.spinner("⏳ Training AI model for first time... please wait 2 minutes"):
             auto_train()
     device = torch.device("cpu")
     return load_model("/tmp/chatbot_model.pt", device)
@@ -85,25 +109,30 @@ def get_model():
 encoder, decoder, word2index, index2word, max_length, device = get_model()
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [("bot", "Hello! How can I help you today?")]
+    st.session_state.messages = [("bot", "Hello! How can I help you today? 😊")]
 
-chat_html = '<div style="background-color:#e5ddd5;border-radius:10px;padding:15px;min-height:300px;">'
+chat_html = '<div class="chat-box">'
 for sender, msg in st.session_state.messages:
-    cls = "bubble-user" if sender == "user" else "bubble-bot"
-    chat_html += f'<div class="{cls}">{msg}</div>'
+    if sender == "user":
+        chat_html += f'<div class="label-user">You</div><div class="user-msg">{msg}</div>'
+    else:
+        chat_html += f'<div class="label-bot">🤖 HelpDesk AI</div><div class="bot-msg">{msg}</div>'
 chat_html += "</div>"
 st.markdown(chat_html, unsafe_allow_html=True)
 
-with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_input("Type a message...", label_visibility="collapsed",
-                                placeholder="Type a message...")
-    submitted = st.form_submit_button("Send")
+col1, col2 = st.columns([4, 1])
+with col1:
+    user_input = st.text_input("", placeholder="Type your message here...",
+                                label_visibility="collapsed", key="input")
+with col2:
+    send = st.button("Send 📤", use_container_width=True)
 
-if submitted and user_input.strip():
+if send and user_input.strip():
     st.session_state.messages.append(("user", user_input))
     response = generate_response(
         user_input, encoder, decoder, word2index, index2word, max_length, device)
     st.session_state.messages.append(("bot", response))
     st.rerun()
 
-st.caption("Powered by PyTorch Seq2Seq with Luong Attention.")
+st.markdown("---")
+st.caption("🔒 Powered by PyTorch Seq2Seq Model with Luong Attention Mechanism")
